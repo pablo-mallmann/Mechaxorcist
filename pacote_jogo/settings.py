@@ -14,13 +14,13 @@ COR_VERDE = (0, 255, 0)
 COR_VERMELHO = (255, 0, 0)
 
 # Configurações do Jogador
-VELOCIDADE_JOGADOR = 6
-GRAVIDADE = 0.6
-FORCA_SALTO = -15 # Valor negativo para ir para cima
+VELOCIDADE_JOGADOR = 5
+GRAVIDADE = 0.3
+FORCA_SALTO = -8 # Valor negativo para ir para cima
 
 # Configurações do Tiro
-VELOCIDADE_TIRO = 12
-COOLDOWN_TIRO = 250 # Tempo em ms entre os tiros automáticos
+VELOCIDADE_TIRO = 10
+COOLDOWN_TIRO = 500 # Tempo em ms entre os tiros automáticos
 
 # Configurações dos Inimigos
 VELOCIDADE_INIMIGO_X_INICIAL = 5
