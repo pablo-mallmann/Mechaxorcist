@@ -21,42 +21,33 @@ class Game:
         self.rodando = True
         self.fundo = Background(self.tela)
         
-        # Carrega e toca os sons do jogo
         self.carregar_sons()
 
-        # Timers de spawn
         self.frequencia_spawn_inimigo = 1200
         self.ultimo_spawn_inimigo = pygame.time.get_ticks()
         self.frequencia_spawn_obstaculo = 3000
         self.ultimo_spawn_obstaculo = pygame.time.get_ticks()
 
     def carregar_sons(self):
-        """ Carrega todos os arquivos de áudio do jogo. """
-        # Carrega o efeito sonoro do tiro
         try:
             self.som_tiro = pygame.mixer.Sound("assets/som_tiro.flac")
-            self.som_tiro.set_volume(0.3)
+            self.som_tiro.set_volume(0.5)
         except pygame.error as e:
             print(f"Erro ao carregar o som assets/som_tiro.flac: {e}")
             self.som_tiro = None
-
-        # Carrega a música de fundo
         try:
             pygame.mixer.music.load("assets/musica1.mp3")
-            pygame.mixer.music.set_volume(0.7)
+            pygame.mixer.music.set_volume(0.3)
             pygame.mixer.music.play(loops=-1)
         except pygame.error as e:
             print(f"Erro ao carregar a música assets/musica1.mp3: {e}")
 
-
     def novo_jogo(self):
-        # Grupos de sprites
         self.todos_sprites = pygame.sprite.Group()
         self.grupo_inimigos = pygame.sprite.Group()
         self.grupo_tiros = pygame.sprite.Group()
         self.grupo_obstaculos = pygame.sprite.Group()
         
-        # Cria o jogador, passando o som do tiro
         self.jogador = Player(self.todos_sprites, self.grupo_tiros, self.som_tiro)
         self.todos_sprites.add(self.jogador)
         
@@ -90,6 +81,7 @@ class Game:
             self.todos_sprites.add(inimigo)
             self.grupo_inimigos.add(inimigo)
 
+
         pygame.sprite.groupcollide(self.grupo_tiros, self.grupo_inimigos, True, True)
 
         if pygame.sprite.spritecollide(self.jogador, self.grupo_obstaculos, False):
@@ -99,10 +91,12 @@ class Game:
             self.jogando = False
 
     def desenhar(self):
+        # 1. Desenha o fundo completo (céu e chão)
         self.fundo.draw()
-        chao_rect = pygame.Rect(0, ALTURA_CHAO, LARGURA_TELA, ALTURA_TELA - ALTURA_CHAO)
-        pygame.draw.rect(self.tela, COR_PRETO, chao_rect)
+        
+        # 2. Desenha todos os sprites do jogo por cima do fundo
         self.todos_sprites.draw(self.tela)
+        
         pygame.display.flip()
 
 if __name__ == "__main__":
