@@ -18,7 +18,7 @@ VELOCIDADE_JOGADOR = 5
 GRAVIDADE = 0.3
 FORCA_SALTO = -8
 FRICCAO_JOGADOR = -0.12
-VIDAS_JOGADOR = 3 # Vida inicial
+VIDAS_JOGADOR = 3
 
 # Configurações do Tiro
 VELOCIDADE_TIRO = 10
@@ -28,3 +28,6 @@ TEMPO_RECARGA = 3000
 # Configurações de UI
 NOME_FONTE = 'arial'
 TAMANHO_FONTE = 24
+
+# Configurações do Chefe
+INIMIGOS_PARA_BOSS = 30

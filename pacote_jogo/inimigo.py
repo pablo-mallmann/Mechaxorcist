@@ -9,7 +9,8 @@ class Inimigo(pygame.sprite.Sprite):
     def __init__(self, jogador):
         super().__init__()
         
-        self.jogador = jogador # Armazena uma referência ao jogador
+        self.jogador = jogador
+        self.is_alive = True # Adicionado para consistência
         self.anim_frames = []
         self.load_frames()
         self.current_frame = 0
@@ -18,11 +19,10 @@ class Inimigo(pygame.sprite.Sprite):
         self.last_anim_update = pygame.time.get_ticks()
         self.anim_cooldown = 120
 
-        # Decide aleatoriamente se o inimigo será normal ou perseguidor
-        if random.random() > 0.8: # 20% de chance de ser perseguidor
+        if random.random() > 0.8:
             self.tipo = 'perseguidor'
             self.velocidade = random.randrange(8, 10)
-
+            
         else:
             self.tipo = 'normal'
             self.velocidade_x = random.randrange(-4, -1)
@@ -57,7 +57,6 @@ class Inimigo(pygame.sprite.Sprite):
         if self.tipo == 'normal':
             self.rect.x += self.velocidade_x
         elif self.tipo == 'perseguidor':
-            # Calcula o vetor em direção ao jogador e se move
             direcao = pygame.math.Vector2(self.jogador.rect.center) - pygame.math.Vector2(self.rect.center)
             if direcao.length_squared() > 0:
                 direcao.normalize_ip()
