@@ -55,12 +55,31 @@ class Boss(pygame.sprite.Sprite):
             self.rect.center = center
 
     def atirar(self):
+        """ Dispara uma rajada de projéteis em arco na direção do jogador. """
         agora = pygame.time.get_ticks()
         if agora - self.ultimo_tiro > self.cooldown_tiro:
             self.ultimo_tiro = agora
-            tiro = TiroBoss(self.rect.midleft, self.jogador)
-            self.todos_sprites.add(tiro)
-            self.grupo_tiros_boss.add(tiro)
+            
+            # Define aleatoriamente quantos projéteis serão disparados na rajada
+            num_projeteis = random.randint(3, 5)
+            # Define o ângulo de separação entre os projéteis
+            angulo_spread = 15 
+
+            # Calcula a direção base para o centro do arco (em direção ao jogador)
+            direcao_base = pygame.math.Vector2(self.jogador.rect.center) - pygame.math.Vector2(self.rect.midleft)
+
+            # Calcula o ângulo inicial do arco
+            angulo_inicial = -((num_projeteis - 1) * angulo_spread) / 2
+
+            for i in range(num_projeteis):
+                # Rotaciona o vetor de direção base para cada projétil
+                angulo_atual = angulo_inicial + i * angulo_spread
+                direcao_projetil = direcao_base.rotate(angulo_atual)
+
+                # Cria o novo tiro com a direção calculada (um vetor)
+                tiro = TiroBoss(self.rect.midleft, direcao_projetil)
+                self.todos_sprites.add(tiro)
+                self.grupo_tiros_boss.add(tiro)
 
     def update(self):
         self.animate()
