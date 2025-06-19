@@ -4,6 +4,7 @@
 import pygame
 import sys
 import random
+import os
 
 from .settings import *
 from .background import Background
@@ -24,28 +25,33 @@ class Game:
         self.clock = pygame.time.Clock()
         self.rodando = True
         self.fundo = Background(self.tela)
-        
         self.carregar_dados()
 
     def carregar_dados(self):
-        self.fonte_grande = pygame.font.SysFont(NOME_FONTE, 74)
-        self.fonte_media = pygame.font.SysFont(NOME_FONTE, 36)
-        self.fonte_pequena = pygame.font.SysFont(NOME_FONTE, TAMANHO_FONTE)
-        
+        caminho_fonte = os.path.join("assets", "fonts", "PressStart2P-Regular.ttf")
+        try:
+            self.fonte_grande = pygame.font.Font(caminho_fonte, 40)
+            self.fonte_media = pygame.font.Font(caminho_fonte, 22)
+            self.fonte_pequena = pygame.font.Font(caminho_fonte, 14)
+        except pygame.error:
+            print(f"Aviso: Ficheiro da fonte '{caminho_fonte}' não encontrado. A usar fonte padrão do sistema.")
+            self.fonte_grande = pygame.font.SysFont(NOME_FONTE, 74)
+            self.fonte_media = pygame.font.SysFont(NOME_FONTE, 36)
+            self.fonte_pequena = pygame.font.SysFont(NOME_FONTE, TAMANHO_FONTE)
+        # Carregamento de sons...
+        # (O resto do método permanece igual)
         try:
             self.som_tiro = pygame.mixer.Sound("assets/som_tiro.flac")
             self.som_tiro.set_volume(0.5)
         except pygame.error as e:
             print(f"Erro ao carregar o som assets/som_tiro.flac: {e}")
             self.som_tiro = None
-        
         try:
             self.som_impacto = pygame.mixer.Sound("assets/playerhitsom.wav")
             self.som_impacto.set_volume(0.6)
         except pygame.error as e:
             print(f"Erro ao carregar o som assets/playerhitsom.wav: {e}")
             self.som_impacto = None
-            
         try:
             pygame.mixer.music.load("assets/musica1.mp3")
             pygame.mixer.music.set_volume(0.3)
@@ -53,24 +59,24 @@ class Game:
         except pygame.error as e:
             print(f"Erro ao carregar a música assets/musica1.mp3: {e}")
 
+
     def novo_jogo(self):
-        """ Configura e inicia uma nova partida. """
-        pygame.mouse.set_visible(False) # Esconde o ponteiro durante a partida
-        
+        pygame.mouse.set_visible(False)
         self.todos_sprites = pygame.sprite.Group()
         self.grupo_inimigos = pygame.sprite.Group()
         self.grupo_tiros = pygame.sprite.Group()
         self.grupo_tiros_boss = pygame.sprite.Group()
         self.grupo_boss = pygame.sprite.GroupSingle()
-
         self.jogador = Player(self.todos_sprites, self.grupo_tiros, self.som_tiro)
         self.todos_sprites.add(self.jogador)
-        
         self.grupo_mira = pygame.sprite.GroupSingle()
         self.mira = Crosshair()
         self.grupo_mira.add(self.mira)
         
+        # Atributos de nível e abate
         self.abates = 0
+        self.abates_para_vida_extra = 0 # Contador para ganhar vida
+        self.nivel = 1
         self.boss_spawned = False
         self.abates_para_proximo_boss = INIMIGOS_PARA_BOSS
         
@@ -82,7 +88,6 @@ class Game:
         self.run_partida()
 
     def run_partida(self):
-        """ O ciclo principal da jogabilidade. """
         self.jogando = True
         while self.jogando:
             self.clock.tick(FPS)
@@ -107,54 +112,65 @@ class Game:
         self.todos_sprites.update()
         self.grupo_mira.update()
 
-        # Gestão de spawn de inimigos e do chefe
         self.gerir_spawn()
-        
-        # Gestão de colisões
         self.checar_colisoes()
         
         if self.jogador.vidas <= 0:
             self.jogando = False
 
     def gerir_spawn(self):
+        # Verifica se o chefe foi derrotado para reiniciar o spawn e subir de nível
         if self.boss_spawned and not self.grupo_boss:
             self.boss_spawned = False
+            self.nivel += 1
+            self.jogador.vidas += 1 # Ganha uma vida por derrotar o chefe
 
+        # Verifica se o chefe deve ser invocado
         if not self.boss_spawned and self.abates >= self.abates_para_proximo_boss:
             self.boss_spawned = True
-            boss = Boss(self.todos_sprites, self.grupo_tiros_boss, self.jogador)
+            # Calcula a velocidade do projétil do chefe com base no nível
+            velocidade_tiro_boss = VELOCIDADE_TIRO_BOSS_BASE + (self.nivel - 1) * AUMENTO_VELOCIDADE_TIRO_BOSS_POR_NIVEL
+            boss = Boss(self.todos_sprites, self.grupo_tiros_boss, self.jogador, velocidade_tiro_boss)
             self.todos_sprites.add(boss)
             self.grupo_boss.add(boss)
             self.abates_para_proximo_boss += INIMIGOS_PARA_BOSS
 
+        # Spawn normal de inimigos
         if not self.boss_spawned:
             agora = pygame.time.get_ticks()
             if agora - self.ultimo_spawn_inimigo > self.frequencia_spawn_inimigo:
                 self.ultimo_spawn_inimigo = agora
-                inimigo_voador = Inimigo(self.jogador)
-                self.todos_sprites.add(inimigo_voador)
-                self.grupo_inimigos.add(inimigo_voador)
+                self.todos_sprites.add(Inimigo(self.jogador))
+                self.grupo_inimigos.add(self.todos_sprites.sprites()[-1])
 
             if agora - self.ultimo_spawn_worm > self.frequencia_spawn_worm:
                 self.ultimo_spawn_worm = agora
-                worm = Worm()
-                self.todos_sprites.add(worm)
-                self.grupo_inimigos.add(worm)
+                self.todos_sprites.add(Worm())
+                self.grupo_inimigos.add(self.todos_sprites.sprites()[-1])
 
     def checar_colisoes(self):
-        colisoes_tiro_inimigo = pygame.sprite.groupcollide(self.grupo_tiros, self.grupo_inimigos, True, False)
-        for inimigos_atingidos in colisoes_tiro_inimigo.values():
+        # --- CORREÇÃO DE COLISÃO ---
+        # Lógica manual para garantir que os tiros só colidam com inimigos vivos.
+        for tiro in self.grupo_tiros:
+            inimigos_atingidos = pygame.sprite.spritecollide(tiro, self.grupo_inimigos, False)
             for inimigo in inimigos_atingidos:
-                if isinstance(inimigo, Worm) and inimigo.is_alive:
+                # Verifica se o inimigo está vivo antes de processar a colisão
+                if inimigo.is_alive:
+                    # O inimigo está vivo, então a colisão é válida.
+                    tiro.kill() # Destrói o tiro
+                    
                     self.abates += 1
+                    self.abates_para_vida_extra += 1
+                    if self.abates_para_vida_extra >= 16:
+                        self.jogador.vidas += 1
+                        self.abates_para_vida_extra = 0
+                    
                     self.todos_sprites.add(Effect(inimigo.rect.center, 'player_hit', self.som_impacto))
                     inimigo.hit()
-                elif isinstance(inimigo, Inimigo) and inimigo.is_alive:
-                    self.abates += 1
-                    inimigo.is_alive = False
-                    self.todos_sprites.add(Effect(inimigo.rect.center, 'player_hit', self.som_impacto))
-                    inimigo.kill()
-        
+                    
+                    # Como o tiro foi destruído, paramos de verificar colisões para este tiro.
+                    break 
+
         if self.boss_spawned:
             colisoes_tiro_boss = pygame.sprite.groupcollide(self.grupo_tiros, self.grupo_boss, True, False)
             for boss_atingido in colisoes_tiro_boss.values():
@@ -173,24 +189,36 @@ class Game:
             self.todos_sprites.add(Effect(self.jogador.rect.center, 'demon_hit'))
 
     def desenhar_texto(self, texto, fonte, cor, x, y, ancora="center"):
+        superficie_contorno = fonte.render(texto, True, COR_PRETO)
+        offsets = [(-2, -2), (2, -2), (-2, 2), (2, 2)]
+        for dx, dy in offsets:
+            rect_contorno = superficie_contorno.get_rect(**{ancora: (x + dx, y + dy)})
+            self.tela.blit(superficie_contorno, rect_contorno)
         superficie_texto = fonte.render(texto, True, cor)
-        rect_texto = superficie_texto.get_rect()
-        setattr(rect_texto, ancora, (x, y))
+        rect_texto = superficie_texto.get_rect(**{ancora: (x, y)})
         self.tela.blit(superficie_texto, rect_texto)
 
     def desenhar_hud(self):
-        self.desenhar_texto(f"Mechaxorcizados: {self.abates}", self.fonte_pequena, COR_BRANCO, 20, ALTURA_TELA - 25, ancora="midleft")
-        if self.jogador.recarregando:
-            self.desenhar_texto("Recarregando...", self.fonte_pequena, COR_VERMELHO, LARGURA_TELA - 20, ALTURA_TELA - 25, ancora="midright")
-        else:
-            self.desenhar_texto(f"Munição: {self.jogador.municao}", self.fonte_pequena, COR_BRANCO, LARGURA_TELA - 20, ALTURA_TELA - 25, ancora="midright")
-        self.desenhar_texto(f"Vidas: {self.jogador.vidas}", self.fonte_pequena, COR_VERDE, LARGURA_TELA // 2, ALTURA_TELA - 25, ancora="midtop")
+        # Desenha os contadores de abates e nível no canto superior esquerdo
+        self.desenhar_texto(f"Mechaxorcizados: {self.abates}", self.fonte_pequena, COR_BRANCO, 20, 20, ancora="topleft")
+        self.desenhar_texto(f"Nível: {self.nivel}", self.fonte_pequena, COR_BRANCO, 20, 40, ancora="topleft")
 
+        # Desenha o contador de munição no canto superior direito
+        if self.jogador.recarregando:
+            self.desenhar_texto("Recarregando...", self.fonte_pequena, COR_VERMELHO, LARGURA_TELA - 20, 20, ancora="topright")
+        else:
+            self.desenhar_texto(f"Munição: {self.jogador.municao}", self.fonte_pequena, COR_BRANCO, LARGURA_TELA - 20, 20, ancora="topright")
+        
+        # Desenha o contador de vidas no topo e ao centro (abaixo da barra do chefe)
+        self.desenhar_texto(f"Vidas: {self.jogador.vidas}", self.fonte_pequena, COR_VERDE, LARGURA_TELA // 2, 50, ancora="midtop")
+
+        # Barra de vida do chefe (já está no topo)
         if self.boss_spawned and len(self.grupo_boss) > 0:
             boss = self.grupo_boss.sprite
             largura_barra = 300
             altura_barra = 25
             vida_atual_largura = (boss.vida / 30) * largura_barra
+            
             borda_rect = pygame.Rect((LARGURA_TELA - largura_barra) / 2, 20, largura_barra, altura_barra)
             vida_rect = pygame.Rect((LARGURA_TELA - largura_barra) / 2, 20, vida_atual_largura, altura_barra)
             pygame.draw.rect(self.tela, COR_VERMELHO, borda_rect)
@@ -203,22 +231,18 @@ class Game:
         self.desenhar_hud()
         self.grupo_mira.draw(self.tela)
         pygame.display.flip()
-
+    
+    # Métodos de telas de menu (start/game over)
     def mostrar_tela_start(self):
-        pygame.mouse.set_visible(True) # Mostra o ponteiro no menu
-        
+        pygame.mouse.set_visible(True)
         self.fundo.draw()
         self.desenhar_texto("Mechaxorcist", self.fonte_grande, COR_BRANCO, LARGURA_TELA / 2, ALTURA_TELA / 4)
-        
         botao_start = pygame.Rect(LARGURA_TELA/2 - 100, ALTURA_TELA/2 - 25, 200, 50)
         botao_sair = pygame.Rect(LARGURA_TELA/2 - 100, ALTURA_TELA/2 + 50, 200, 50)
-        
         pygame.draw.rect(self.tela, COR_VERDE, botao_start)
         pygame.draw.rect(self.tela, COR_VERMELHO, botao_sair)
-        
         self.desenhar_texto("Start", self.fonte_media, COR_BRANCO, botao_start.centerx, botao_start.centery)
         self.desenhar_texto("Sair", self.fonte_media, COR_BRANCO, botao_sair.centerx, botao_sair.centery)
-        
         pygame.display.flip()
         self.esperar_por_input_menu(botao_start, botao_sair)
 
@@ -238,16 +262,13 @@ class Game:
                         self.rodando = False
     
     def mostrar_tela_game_over(self):
-        pygame.mouse.set_visible(True) # Mostra o ponteiro no menu
-        
+        pygame.mouse.set_visible(True)
         self.fundo.draw()
         self.desenhar_texto("GAME OVER", self.fonte_grande, COR_VERMELHO, LARGURA_TELA / 2, ALTURA_TELA / 4)
         self.desenhar_texto(f"Mechaxorcizados: {self.abates}", self.fonte_media, COR_BRANCO, LARGURA_TELA / 2, ALTURA_TELA / 2)
-        
         botao_reiniciar = pygame.Rect(LARGURA_TELA/2 - 125, ALTURA_TELA * 3/4 - 25, 250, 50)
         pygame.draw.rect(self.tela, COR_VERDE, botao_reiniciar)
         self.desenhar_texto("Reiniciar", self.fonte_media, COR_BRANCO, botao_reiniciar.centerx, botao_reiniciar.centery)
-        
         pygame.display.flip()
         self.esperar_por_input_game_over(botao_reiniciar)
     

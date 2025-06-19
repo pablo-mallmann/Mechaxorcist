@@ -6,7 +6,7 @@ import os
 from .settings import *
 
 class TiroBoss(pygame.sprite.Sprite):
-    def __init__(self, pos_inicial, alvo):
+    def __init__(self, pos_inicial, direcao, velocidade):
         super().__init__()
         try:
             self.image = pygame.image.load(os.path.join("assets", "tiroboss.png")).convert_alpha()
@@ -16,21 +16,11 @@ class TiroBoss(pygame.sprite.Sprite):
         
         self.rect = self.image.get_rect(center=pos_inicial)
         
-        # --- CORREÇÃO DO ERRO ---
-        # Verifica se o 'alvo' é um sprite (como o jogador) ou já um vetor de direção
-        if isinstance(alvo, pygame.sprite.Sprite):
-            # Se for um sprite, calcula o vetor de direção para o centro dele
-            direcao = pygame.math.Vector2(alvo.rect.center) - pygame.math.Vector2(pos_inicial)
-        else:
-            # Se não, assume que 'alvo' já é o vetor de direção
-            direcao = alvo
-            
-        # Usa o vetor de direção calculado para definir a velocidade
+        # Usa o vetor de direção e a velocidade recebida
         if direcao.length() > 0:
-            self.vel = direcao.normalize() * 11 # Velocidade do tiro do chefe
+            self.vel = direcao.normalize() * velocidade
         else:
-            # Caso de segurança se o vetor for nulo
-            self.vel = pygame.math.Vector2(-7, 0)
+            self.vel = pygame.math.Vector2(-velocidade, 0)
 
     def update(self):
         self.rect.move_ip(self.vel)
