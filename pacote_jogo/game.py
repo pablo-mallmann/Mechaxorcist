@@ -39,7 +39,6 @@ class Game:
             self.fonte_media = pygame.font.SysFont(NOME_FONTE, 36)
             self.fonte_pequena = pygame.font.SysFont(NOME_FONTE, TAMANHO_FONTE)
         # Carregamento de sons...
-        # (O resto do método permanece igual)
         try:
             self.som_tiro = pygame.mixer.Sound("assets/som_tiro.flac")
             self.som_tiro.set_volume(0.5)
@@ -75,10 +74,14 @@ class Game:
         
         # Atributos de nível e abate
         self.abates = 0
-        self.abates_para_vida_extra = 0 # Contador para ganhar vida
+        self.abates_para_vida_extra = 0
         self.nivel = 1
         self.boss_spawned = False
         self.abates_para_proximo_boss = INIMIGOS_PARA_BOSS
+        
+        # Atributos para o display de nível
+        self.mostrar_level_up = False
+        self.tempo_level_up = 0
         
         self.frequencia_spawn_inimigo = 1200
         self.ultimo_spawn_inimigo = pygame.time.get_ticks()
@@ -123,52 +126,49 @@ class Game:
         if self.boss_spawned and not self.grupo_boss:
             self.boss_spawned = False
             self.nivel += 1
-            self.jogador.vidas += 1 # Ganha uma vida por derrotar o chefe
+            self.jogador.vidas += 1
+            self.mostrar_level_up = True
+            self.tempo_level_up = pygame.time.get_ticks()
 
-        # Verifica se o chefe deve ser invocado
+        # Calcula os parâmetros de dificuldade com base no nível atual
+        multiplicador_velocidade = 1 + (self.nivel - 1) * AUMENTO_VELOCIDADE_INIMIGO_POR_NIVEL
+        velocidade_tiro_boss = VELOCIDADE_TIRO_BOSS_BASE + (self.nivel - 1) * AUMENTO_VELOCIDADE_TIRO_BOSS_POR_NIVEL
+        cooldown_tiro_boss = max(500, COOLDOWN_TIRO_BOSS_BASE - (self.nivel - 1) * REDUCAO_COOLDOWN_BOSS_POR_NIVEL)
+
         if not self.boss_spawned and self.abates >= self.abates_para_proximo_boss:
             self.boss_spawned = True
-            # Calcula a velocidade do projétil do chefe com base no nível
-            velocidade_tiro_boss = VELOCIDADE_TIRO_BOSS_BASE + (self.nivel - 1) * AUMENTO_VELOCIDADE_TIRO_BOSS_POR_NIVEL
-            boss = Boss(self.todos_sprites, self.grupo_tiros_boss, self.jogador, velocidade_tiro_boss)
+            # Passa o cooldown calculado para o chefe
+            boss = Boss(self.todos_sprites, self.grupo_tiros_boss, self.jogador, velocidade_tiro_boss, cooldown_tiro_boss)
             self.todos_sprites.add(boss)
             self.grupo_boss.add(boss)
             self.abates_para_proximo_boss += INIMIGOS_PARA_BOSS
 
-        # Spawn normal de inimigos
         if not self.boss_spawned:
             agora = pygame.time.get_ticks()
             if agora - self.ultimo_spawn_inimigo > self.frequencia_spawn_inimigo:
                 self.ultimo_spawn_inimigo = agora
-                self.todos_sprites.add(Inimigo(self.jogador))
+                self.todos_sprites.add(Inimigo(self.jogador, multiplicador_velocidade))
                 self.grupo_inimigos.add(self.todos_sprites.sprites()[-1])
 
             if agora - self.ultimo_spawn_worm > self.frequencia_spawn_worm:
                 self.ultimo_spawn_worm = agora
-                self.todos_sprites.add(Worm())
+                self.todos_sprites.add(Worm(multiplicador_velocidade))
                 self.grupo_inimigos.add(self.todos_sprites.sprites()[-1])
 
     def checar_colisoes(self):
-        # --- CORREÇÃO DE COLISÃO ---
         # Lógica manual para garantir que os tiros só colidam com inimigos vivos.
         for tiro in self.grupo_tiros:
             inimigos_atingidos = pygame.sprite.spritecollide(tiro, self.grupo_inimigos, False)
             for inimigo in inimigos_atingidos:
-                # Verifica se o inimigo está vivo antes de processar a colisão
                 if inimigo.is_alive:
-                    # O inimigo está vivo, então a colisão é válida.
-                    tiro.kill() # Destrói o tiro
-                    
+                    tiro.kill()
                     self.abates += 1
                     self.abates_para_vida_extra += 1
                     if self.abates_para_vida_extra >= 16:
                         self.jogador.vidas += 1
                         self.abates_para_vida_extra = 0
-                    
                     self.todos_sprites.add(Effect(inimigo.rect.center, 'player_hit', self.som_impacto))
                     inimigo.hit()
-                    
-                    # Como o tiro foi destruído, paramos de verificar colisões para este tiro.
                     break 
 
         if self.boss_spawned:
@@ -199,20 +199,16 @@ class Game:
         self.tela.blit(superficie_texto, rect_texto)
 
     def desenhar_hud(self):
-        # Desenha os contadores de abates e nível no canto superior esquerdo
         self.desenhar_texto(f"Mechaxorcizados: {self.abates}", self.fonte_pequena, COR_BRANCO, 20, 20, ancora="topleft")
         self.desenhar_texto(f"Nível: {self.nivel}", self.fonte_pequena, COR_BRANCO, 20, 40, ancora="topleft")
 
-        # Desenha o contador de munição no canto superior direito
         if self.jogador.recarregando:
             self.desenhar_texto("Recarregando...", self.fonte_pequena, COR_VERMELHO, LARGURA_TELA - 20, 20, ancora="topright")
         else:
             self.desenhar_texto(f"Munição: {self.jogador.municao}", self.fonte_pequena, COR_BRANCO, LARGURA_TELA - 20, 20, ancora="topright")
         
-        # Desenha o contador de vidas no topo e ao centro (abaixo da barra do chefe)
         self.desenhar_texto(f"Vidas: {self.jogador.vidas}", self.fonte_pequena, COR_VERDE, LARGURA_TELA // 2, 50, ancora="midtop")
 
-        # Barra de vida do chefe (já está no topo)
         if self.boss_spawned and len(self.grupo_boss) > 0:
             boss = self.grupo_boss.sprite
             largura_barra = 300
@@ -225,14 +221,22 @@ class Game:
             pygame.draw.rect(self.tela, COR_VERDE, vida_rect)
             pygame.draw.rect(self.tela, COR_BRANCO, borda_rect, 2)
 
+    def desenhar_level_up(self):
+        if self.mostrar_level_up:
+            agora = pygame.time.get_ticks()
+            if agora - self.tempo_level_up < 2000:
+                self.desenhar_texto(f"Nível {self.nivel}", self.fonte_grande, COR_VERDE, LARGURA_TELA / 2, ALTURA_TELA / 2)
+            else:
+                self.mostrar_level_up = False
+
     def desenhar(self):
         self.fundo.draw()
         self.todos_sprites.draw(self.tela)
         self.desenhar_hud()
+        self.desenhar_level_up()
         self.grupo_mira.draw(self.tela)
         pygame.display.flip()
     
-    # Métodos de telas de menu (start/game over)
     def mostrar_tela_start(self):
         pygame.mouse.set_visible(True)
         self.fundo.draw()

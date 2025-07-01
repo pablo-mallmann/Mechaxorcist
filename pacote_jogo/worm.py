@@ -7,7 +7,7 @@ import os
 from .settings import *
 
 class Worm(pygame.sprite.Sprite):
-    def __init__(self):
+    def __init__(self, speed_multiplier=1.0):
         super().__init__()
 
         self.is_alive = True
@@ -24,19 +24,17 @@ class Worm(pygame.sprite.Sprite):
 
         self.rect.bottom = ALTURA_CHAO
         self.rect.left = random.randrange(LARGURA_TELA, LARGURA_TELA + 400)
-        self.velocidade_x = random.randrange(-5, -2)
+        self.velocidade_x = random.randrange(-5, -2) * speed_multiplier
 
     def load_frames(self):
-        # Carrega frames de caminhada
         for i in range(1, 10):
             self._carregar_frame(f"assets/worm{i}.png", self.walk_frames)
-        # Carrega frames de morte
         for i in range(1, 9):
             self._carregar_frame(f"assets/wormdeath{i}.png", self.death_frames)
 
     def _carregar_frame(self, caminho, lista_frames):
         try:
-            frame = pygame.image.load(caminho).convert_alpha()
+            frame = pygame.image.load(os.path.join(caminho)).convert_alpha()
             lista_frames.append(frame)
         except pygame.error:
             substituto = pygame.Surface((50, 20), pygame.SRCALPHA)
@@ -44,7 +42,6 @@ class Worm(pygame.sprite.Sprite):
             lista_frames.append(substituto)
 
     def hit(self):
-        """ Inicia a sequência de morte. """
         if self.is_alive:
             self.is_alive = False
             self.current_frame = 0
@@ -56,7 +53,7 @@ class Worm(pygame.sprite.Sprite):
             self.rect.x += self.velocidade_x
             if self.rect.right < 0:
                 self.kill()
-        else: # Estado de morte
+        else:
             self.animate(self.death_frames, loop=False)
 
     def animate(self, frame_list, loop):
@@ -64,16 +61,12 @@ class Worm(pygame.sprite.Sprite):
         if agora - self.last_anim_update > self.anim_cooldown:
             self.last_anim_update = agora
             self.current_frame += 1
-            
-            # Se a animação terminou
             if self.current_frame >= len(frame_list):
                 if loop:
-                    self.current_frame = 0 # Reinicia se for em loop
+                    self.current_frame = 0
                 else:
-                    self.kill() # Remove o sprite se não for em loop (animação de morte)
-                    return # Para a execução para evitar erro
-            
+                    self.kill()
+                    return
             bottomleft = self.rect.bottomleft
             self.image = frame_list[self.current_frame]
-            self.rect = self.image.get_rect()
-            self.rect.bottomleft = bottomleft
+            self.rect = self.image.get_rect(bottomleft=bottomleft)
