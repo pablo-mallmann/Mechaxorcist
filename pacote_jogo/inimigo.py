@@ -26,7 +26,7 @@ class Inimigo(pygame.sprite.Sprite):
 
         if random.random() > 0.8:
             self.tipo = 'perseguidor'
-            self.velocidade = random.randrange(1, 3) * speed_multiplier
+            self.velocidade = random.randrange(2, 5) * speed_multiplier
         else:
             self.tipo = 'normal'
             self.velocidade_x = random.randrange(-4, -1) * speed_multiplier
