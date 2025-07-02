@@ -12,6 +12,7 @@ class Inimigo(pygame.sprite.Sprite):
         
         self.jogador = jogador
         self.is_alive = True
+        self.vida = INIMIGO_HEALTH_BASE # Vida do inimigo
         
         self.walk_frames = []
         self.death_frames = []
@@ -26,7 +27,7 @@ class Inimigo(pygame.sprite.Sprite):
 
         if random.random() > 0.8:
             self.tipo = 'perseguidor'
-            self.velocidade = random.randrange(2, 5) * speed_multiplier
+            self.velocidade = random.randrange(1, 3) * speed_multiplier
         else:
             self.tipo = 'normal'
             self.velocidade_x = random.randrange(-4, -1) * speed_multiplier
@@ -49,11 +50,13 @@ class Inimigo(pygame.sprite.Sprite):
             substituto.fill(COR_VERMELHO)
             lista_frames.append(substituto)
 
-    def hit(self):
+    def hit(self, damage):
         if self.is_alive:
-            self.is_alive = False
-            self.current_frame = 0
-            self.last_anim_update = pygame.time.get_ticks()
+            self.vida -= damage
+            if self.vida <= 0:
+                self.is_alive = False
+                self.current_frame = 0
+                self.last_anim_update = pygame.time.get_ticks()
 
     def update(self):
         if self.is_alive:

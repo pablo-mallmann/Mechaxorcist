@@ -11,6 +11,7 @@ class Worm(pygame.sprite.Sprite):
         super().__init__()
 
         self.is_alive = True
+        self.vida = WORM_HEALTH_BASE # Vida do worm
         self.walk_frames = []
         self.death_frames = []
         self.load_frames()
@@ -41,11 +42,13 @@ class Worm(pygame.sprite.Sprite):
             substituto.fill((255, 100, 100))
             lista_frames.append(substituto)
 
-    def hit(self):
+    def hit(self, damage):
         if self.is_alive:
-            self.is_alive = False
-            self.current_frame = 0
-            self.last_anim_update = pygame.time.get_ticks()
+            self.vida -= damage
+            if self.vida <= 0:
+                self.is_alive = False
+                self.current_frame = 0
+                self.last_anim_update = pygame.time.get_ticks()
 
     def update(self):
         if self.is_alive:

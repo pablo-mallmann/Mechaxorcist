@@ -6,7 +6,7 @@ import os
 from .settings import *
 
 class Tiro(pygame.sprite.Sprite):
-    def __init__(self, pos_inicial, alvo, velocidade, penetration):
+    def __init__(self, pos_inicial, alvo, velocidade, penetration, damage):
         super().__init__()
         try:
             self.image = pygame.image.load(os.path.join("assets", "tiro1.png")).convert_alpha()
@@ -15,7 +15,8 @@ class Tiro(pygame.sprite.Sprite):
             self.image.fill(COR_BRANCO)
         
         self.rect = self.image.get_rect()
-        self.penetration = penetration # Quantos inimigos pode atravessar
+        self.penetration = penetration
+        self.damage = damage # Armazena o dano do tiro
         self.pos = pygame.math.Vector2(pos_inicial)
         self.rect.center = self.pos
         

@@ -4,6 +4,7 @@
 import pygame
 from .settings import *
 from .tiro import Tiro
+from .shield import Shield
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, all_sprites, bullets, som_tiro):
@@ -12,21 +13,25 @@ class Player(pygame.sprite.Sprite):
         self.grupo_tiros = bullets
         self.som_tiro = som_tiro
         
-        # Atributos de Power-up (começam com os valores base)
+        # Atributos de Power-up
+        self.damage = PLAYER_DAMAGE_BASE
+        self.crit_chance = CRIT_CHANCE_BASE
         self.max_municao = MUNICAO_MAXIMA_BASE
         self.tempo_recarga = TEMPO_RECARGA_BASE
         self.velocidade_tiro = VELOCIDADE_TIRO_BASE
         self.tiro_penetration = TIRO_PENETRATION_BASE
         self.projectile_count = PLAYER_PROJECTILE_COUNT_BASE
         self.dano_boss_modifier = 1.0
+        self.has_shield_chance = False # Flag para o power-up do escudo
 
         # Atributos normais
         self.municao = self.max_municao
         self.vidas = VIDAS_JOGADOR
         self.recarregando = False
         self.tempo_inicio_recarga = 0
+        self.shield_sprite = None # Referência para o sprite do escudo
 
-        # Animação
+        # Animação e Física (código omitido por brevidade, permanece igual)
         self.anim_frames = []
         self.load_frames()
         self.current_frame = 0
@@ -34,8 +39,6 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.last_anim_update = pygame.time.get_ticks()
         self.anim_cooldown = 100
-
-        # Posição e Física
         self.rect.centerx = LARGURA_TELA / 2
         self.rect.bottom = ALTURA_CHAO
         self.pos = pygame.math.Vector2(self.rect.center)
@@ -45,9 +48,9 @@ class Player(pygame.sprite.Sprite):
     def aplicar_power_up(self, power_up_id):
         if power_up_id == 'aumento_municao':
             self.max_municao += 2
-            self.municao += 2 # Adiciona a munição extra imediatamente
+            self.municao += 2
         elif power_up_id == 'aumento_recarga':
-            self.tempo_recarga = max(500, self.tempo_recarga - 50) # Garante um mínimo
+            self.tempo_recarga = max(500, self.tempo_recarga - 50)
         elif power_up_id == 'aumento_velocidade_projetil':
             self.velocidade_tiro += 0.5
         elif power_up_id == 'aumento_dano_boss':
@@ -56,25 +59,36 @@ class Player(pygame.sprite.Sprite):
             self.tiro_penetration += 1
         elif power_up_id == 'aumento_projeteis':
             self.projectile_count += 1
-            
+        elif power_up_id == 'aumento_dano_tiro':
+            self.damage += 0.5
+        elif power_up_id == 'aumento_crit_chance':
+            self.crit_chance += 0.05
+        elif power_up_id == 'chance_escudo':
+            self.has_shield_chance = True
+
+    def activate_shield(self):
+        """ Ativa o escudo se não houver um ativo. """
+        if not self.shield_sprite or not self.shield_sprite.alive():
+            self.shield_sprite = Shield(self)
+            self.todos_sprites.add(self.shield_sprite)
+
     def atirar(self):
         if self.municao > 0 and not self.recarregando:
             self.municao -= 1
             pos_mouse = pygame.mouse.get_pos()
             
             if self.projectile_count == 1:
-                tiro = Tiro(self.rect.center, pos_mouse, self.velocidade_tiro, self.tiro_penetration)
+                tiro = Tiro(self.rect.center, pos_mouse, self.velocidade_tiro, self.tiro_penetration, self.damage)
                 self.todos_sprites.add(tiro)
                 self.grupo_tiros.add(tiro)
             else:
-                # Disparo em cone
                 angulo_spread = 10
                 direcao_base = pygame.math.Vector2(pos_mouse) - pygame.math.Vector2(self.rect.center)
                 angulo_inicial = -((self.projectile_count - 1) * angulo_spread) / 2
                 for i in range(self.projectile_count):
                     angulo_atual = angulo_inicial + i * angulo_spread
                     direcao_projetil = direcao_base.rotate(angulo_atual)
-                    tiro = Tiro(self.rect.center, direcao_projetil, self.velocidade_tiro, self.tiro_penetration)
+                    tiro = Tiro(self.rect.center, direcao_projetil, self.velocidade_tiro, self.tiro_penetration, self.damage)
                     self.todos_sprites.add(tiro)
                     self.grupo_tiros.add(tiro)
 
@@ -84,20 +98,18 @@ class Player(pygame.sprite.Sprite):
             if self.municao == 0:
                 self.recarregando = True
                 self.tempo_inicio_recarga = pygame.time.get_ticks()
-
+    
+    # O resto dos métodos permanece igual
     def checar_recarga(self):
         if self.recarregando:
             agora = pygame.time.get_ticks()
             if agora - self.tempo_inicio_recarga > self.tempo_recarga:
                 self.municao = self.max_municao
                 self.recarregando = False
-    
-    # O resto dos métodos (load_frames, animate, saltar, update) permanece igual
     def load_frames(self):
         for i in range(1, 7):
             frame = pygame.image.load(f"assets/robo{i}.png").convert_alpha()
             self.anim_frames.append(frame)
-
     def animate(self):
         agora = pygame.time.get_ticks()
         if agora - self.last_anim_update > self.anim_cooldown:
@@ -106,11 +118,9 @@ class Player(pygame.sprite.Sprite):
             bottom = self.rect.bottom
             self.image = self.anim_frames[self.current_frame]
             self.rect = self.image.get_rect(bottom=bottom)
-
     def saltar(self):
         if self.rect.bottom >= ALTURA_CHAO:
             self.vel.y = FORCA_SALTO
-
     def update(self):
         self.animate()
         self.checar_recarga()
