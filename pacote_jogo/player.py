@@ -16,20 +16,21 @@ class Player(pygame.sprite.Sprite):
         # Atributos de Power-up
         self.damage = PLAYER_DAMAGE_BASE
         self.crit_chance = CRIT_CHANCE_BASE
+        self.vamp_chance = VAMP_CHANCE_BASE # Novo atributo
         self.max_municao = MUNICAO_MAXIMA_BASE
         self.tempo_recarga = TEMPO_RECARGA_BASE
         self.velocidade_tiro = VELOCIDADE_TIRO_BASE
         self.tiro_penetration = TIRO_PENETRATION_BASE
         self.projectile_count = PLAYER_PROJECTILE_COUNT_BASE
         self.dano_boss_modifier = 1.0
-        self.has_shield_chance = False # Flag para o power-up do escudo
+        self.has_shield_chance = False
 
         # Atributos normais
         self.municao = self.max_municao
         self.vidas = VIDAS_JOGADOR
         self.recarregando = False
         self.tempo_inicio_recarga = 0
-        self.shield_sprite = None # Referência para o sprite do escudo
+        self.shield_sprite = None
 
         # Animação e Física (código omitido por brevidade, permanece igual)
         self.anim_frames = []
@@ -65,9 +66,10 @@ class Player(pygame.sprite.Sprite):
             self.crit_chance += 0.05
         elif power_up_id == 'chance_escudo':
             self.has_shield_chance = True
+        elif power_up_id == 'vampirismo':
+            self.vamp_chance += 0.05 # Aumenta a chance em 5%
 
     def activate_shield(self):
-        """ Ativa o escudo se não houver um ativo. """
         if not self.shield_sprite or not self.shield_sprite.alive():
             self.shield_sprite = Shield(self)
             self.todos_sprites.add(self.shield_sprite)

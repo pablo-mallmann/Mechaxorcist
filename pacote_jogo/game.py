@@ -32,14 +32,15 @@ class Game:
         # Lista de todos os power-ups disponíveis
         self.power_ups_disponiveis = [
             {'id': 'aumento_municao', 'texto': 'Munição Máxima +2'},
-            {'id': 'aumento_recarga', 'texto': 'Recarga Rápida (-50ms)'},
-            {'id': 'aumento_velocidade_projetil', 'texto': 'Velocidade do Tiro +0.5'},
+            {'id': 'aumento_recarga', 'texto': 'Velocidade de recarga'},
+            {'id': 'aumento_velocidade_projetil', 'texto': 'Velocidade de projétil'},
             {'id': 'aumento_dano_boss', 'texto': 'Dano ao Chefe +1%'},
             {'id': 'aumento_penetracao', 'texto': 'Tiro Perfurante +1'},
             {'id': 'aumento_projeteis', 'texto': 'Projétil Adicional +1'},
-            {'id': 'aumento_dano_tiro', 'texto': 'Dano do Tiro +0.5'},
+            {'id': 'aumento_dano_tiro', 'texto': 'Dano adicional'},
             {'id': 'aumento_crit_chance', 'texto': 'Chance Crítica +5%'},
-            {'id': 'chance_escudo', 'texto': 'Escudo Protetor (Chance ao Abater)'}
+            {'id': 'chance_escudo', 'texto': 'Escudo (Chance ao Abater)'},
+            {'id': 'vampirismo', 'texto': 'Vampirismo (Chance ao Abater)'}
         ]
 
     def carregar_dados(self):
@@ -185,6 +186,8 @@ class Game:
                         self.abates += 1
                         if self.jogador.has_shield_chance and random.random() < SHIELD_SPAWN_CHANCE:
                             self.jogador.activate_shield()
+                        if random.random() < self.jogador.vamp_chance:
+                            self.jogador.vidas += 1
                     
                     if not tiro.alive():
                         break
