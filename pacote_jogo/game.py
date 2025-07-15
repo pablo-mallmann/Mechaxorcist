@@ -34,13 +34,13 @@ class Game:
             {'id': 'aumento_municao', 'texto': 'Munição Máxima +2'},
             {'id': 'aumento_recarga', 'texto': 'Velocidade de recarga'},
             {'id': 'aumento_velocidade_projetil', 'texto': 'Velocidade de projétil'},
-            {'id': 'aumento_dano_boss', 'texto': 'Dano ao Chefe +1%'},
-            {'id': 'aumento_penetracao', 'texto': 'Tiro Perfurante +1'},
+            {'id': 'aumento_dano_boss', 'texto': 'Dano ao Chefe'},
+            {'id': 'aumento_penetracao', 'texto': 'Impacto +1'},
             {'id': 'aumento_projeteis', 'texto': 'Projétil Adicional +1'},
             {'id': 'aumento_dano_tiro', 'texto': 'Dano adicional'},
-            {'id': 'aumento_crit_chance', 'texto': 'Chance Crítica +5%'},
-            {'id': 'chance_escudo', 'texto': 'Escudo (Chance ao Abater)'},
-            {'id': 'vampirismo', 'texto': 'Vampirismo (Chance ao Abater)'}
+            {'id': 'aumento_crit_chance', 'texto': 'Chance Crítica'},
+            {'id': 'chance_escudo', 'texto': 'Escudo'},
+            {'id': 'vampirismo', 'texto': 'Vampirismo'}
         ]
 
     def carregar_dados(self):
